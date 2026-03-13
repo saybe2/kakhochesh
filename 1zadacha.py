@@ -13,7 +13,7 @@ class MapApp(QMainWindow):
         self.api_key = "f3a0fe3a-b07e-4840-a1da-06f18b2ddf13"
         self.map_file = "map.png"
         self.initUI()
-        
+
         self.lat_input.setText("55.7558")
         self.lon_input.setText("37.6173")
         self.zoom_input.setText("12")
@@ -70,12 +70,12 @@ class MapApp(QMainWindow):
         try:
             lat_text = self.lat_input.text().strip()
             lon_text = self.lon_input.text().strip()
-            
+
             if not lat_text:
                 raise ValueError("Введите широту")
             if not lon_text:
                 raise ValueError("Введите долготу")
-            
+
             lat = float(lat_text.replace(',', '.'))
             lon = float(lon_text.replace(',', '.'))
 
@@ -90,47 +90,51 @@ class MapApp(QMainWindow):
             return lat, lon, zoom
 
         except ValueError as e:
-            QMessageBox.warning(self, 'Ошибка', f'Некорректные данные:\n{str(e)}')
+            QMessageBox.warning(
+                self, 'Ошибка', f'Некорректные данные:\n{str(e)}')
             return None
 
     def get_map_image(self, lat, lon, zoom):
         try:
             server_address = 'https://static-maps.yandex.ru/v1?'
-            
+
             spn_value = 0.002 * (18 - zoom + 1)
-            
+
             map_request = f"{server_address}ll={lon},{lat}&spn={spn_value},{spn_value}&apikey={self.api_key}"
-            
+
             response = requests.get(map_request)
-            
+
             with open(self.map_file, "wb") as file:
                 file.write(response.content)
-                
+
             return True
-            
+
         except requests.exceptions.RequestException as e:
-            QMessageBox.critical(self, 'Ошибка сети', f'Не удалось подключиться к серверу:\n{str(e)}')
+            QMessageBox.critical(
+                self, 'Ошибка сети', f'Не удалось подключиться к серверу:\n{str(e)}')
             return False
         except Exception as e:
-            QMessageBox.critical(self, 'Ошибка', f'Не удалось получить карту:\n{str(e)}')
+            QMessageBox.critical(
+                self, 'Ошибка', f'Не удалось получить карту:\n{str(e)}')
             return False
 
     def show_map(self):
         result = self.validate_inputs()
         if result:
             lat, lon, zoom = result
-            
+
             if self.get_map_image(lat, lon, zoom):
                 pixmap = QPixmap(self.map_file)
-                
+
                 scaled_pixmap = pixmap.scaled(
-                    self.map_label.size(), 
+                    self.map_label.size(),
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation
                 )
-                
+
                 self.map_label.setPixmap(scaled_pixmap)
-                self.status_bar.showMessage(f'Координаты: {lat:.4f}, {lon:.4f} | Масштаб: {zoom}')
+                self.status_bar.showMessage(
+                    f'Координаты: {lat:.4f}, {lon:.4f} | Масштаб: {zoom}')
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
@@ -143,7 +147,7 @@ class MapApp(QMainWindow):
         if hasattr(self, 'map_label') and self.map_label.pixmap() is not None:
             pixmap = QPixmap(self.map_file)
             scaled_pixmap = pixmap.scaled(
-                self.map_label.size(), 
+                self.map_label.size(),
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
@@ -159,12 +163,12 @@ class MapApp(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    
+
     app.setStyle('Fusion')
-    
+
     window = MapApp()
     window.show()
-    
+
     sys.exit(app.exec())
 
 
