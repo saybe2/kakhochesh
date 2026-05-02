@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 
 class MapApp(QMainWindow):
     MIN_ZOOM = 1
-    MAX_ZOOM = 18
+    MAX_ZOOM = 20
     MIN_LAT = -85.0
     MAX_LAT = 85.0
     MIN_LON = -180.0
@@ -33,7 +33,7 @@ class MapApp(QMainWindow):
 
         self.lat_input.setText("55.7558")
         self.lon_input.setText("37.6173")
-        self.zoom_input.setText("12")
+        self.zoom_input.setText("16")
         self.show_map()
 
     def init_ui(self):
@@ -76,7 +76,7 @@ class MapApp(QMainWindow):
 
         zoom_label = QLabel("Масштаб:")
         self.zoom_input = QLineEdit()
-        self.zoom_input.setPlaceholderText("12")
+        self.zoom_input.setPlaceholderText("16")
         control_layout.addWidget(zoom_label)
         control_layout.addWidget(self.zoom_input)
 
@@ -110,7 +110,7 @@ class MapApp(QMainWindow):
             lon = self.clamp(lon, self.MIN_LON, self.MAX_LON)
 
             zoom_text = self.zoom_input.text().strip()
-            zoom = int(zoom_text) if zoom_text else 12
+            zoom = int(zoom_text) if zoom_text else 16
             zoom = int(self.clamp(zoom, self.MIN_ZOOM, self.MAX_ZOOM))
 
             return lat, lon, zoom
@@ -123,7 +123,7 @@ class MapApp(QMainWindow):
             span_value = self.get_span(zoom)
             request_url = (
                 "https://static-maps.yandex.ru/v1?"
-                f"ll={lon},{lat}&spn={span_value},{span_value}&apikey={self.api_key}"
+                f"ll={lon},{lat}&z={zoom}&apikey={self.api_key}"
             )
             response = requests.get(request_url, timeout=10)
             response.raise_for_status()
