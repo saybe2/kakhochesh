@@ -18,7 +18,7 @@ from PyQt6.QtCore import Qt
 
 class MapApp(QMainWindow):
     MIN_ZOOM = 1
-    MAX_ZOOM = 18
+    MAX_ZOOM = 20
 
     def __init__(self):
         super().__init__()
@@ -90,7 +90,7 @@ class MapApp(QMainWindow):
             lon = float(lon_text.replace(",", "."))
 
             zoom_text = self.zoom_input.text().strip()
-            zoom = int(zoom_text) if zoom_text else 12
+            zoom = int(float(zoom_text)) if zoom_text else 12
             if not (self.MIN_ZOOM <= zoom <= self.MAX_ZOOM):
                 raise ValueError(
                     f"Масштаб должен быть от {self.MIN_ZOOM} до {self.MAX_ZOOM}"
@@ -105,13 +105,13 @@ class MapApp(QMainWindow):
     def get_map_image(self, lat, lon, zoom):
         try:
             server_address = "https://static-maps.yandex.ru/v1?"
-            spn_value = 0.002 * (self.MAX_ZOOM - zoom + 1)
             map_request = (
                 f"{server_address}ll={lon},{lat}"
-                f"&spn={spn_value},{spn_value}&apikey={self.api_key}"
+                f"&z={zoom}&apikey={self.api_key}"
             )
             response = requests.get(map_request, timeout=10)
             response.raise_for_status()
+            print(response.url)
 
             with open(self.map_file, "wb") as file:
                 file.write(response.content)
