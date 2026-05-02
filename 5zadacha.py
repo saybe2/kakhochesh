@@ -304,9 +304,6 @@ class MapApp(QMainWindow):
         if key == Qt.Key.Key_Escape:
             self.close()
             return True
-        if key == Qt.Key.Key_T:
-            self.toggle_theme()
-            return True
         return False
 
     def eventFilter(self, watched, event):
