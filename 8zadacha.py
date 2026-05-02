@@ -224,15 +224,6 @@ class MapApp(QMainWindow):
         geo_obj = members[0]["GeoObject"]
         address = geo_obj["metaDataProperty"]["GeocoderMetaData"]["text"]
 
-        envelope = geo_obj.get("boundedBy", {}).get("Envelope")
-
-        if envelope and "lowerCorner" in envelope and "upperCorner" in envelope:
-            low_lon, low_lat = map(float, envelope["lowerCorner"].split())
-            up_lon, up_lat = map(float, envelope["upperCorner"].split())
-            center_lon = (low_lon + up_lon) / 2
-            center_lat = (low_lat + up_lat) / 2
-            return (center_lon, center_lat), address
-
         point_lon, point_lat = map(float, geo_obj["Point"]["pos"].split())
         return (point_lon, point_lat), address
 
