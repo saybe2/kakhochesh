@@ -315,12 +315,13 @@ class MapApp(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, "map_label") and self.map_label.pixmap() is not None:
             pixmap = QPixmap(self.map_file)
-            scaled_pixmap = pixmap.scaled(
-                self.map_label.size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            self.map_label.setPixmap(scaled_pixmap)
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(
+                    self.map_label.size(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.map_label.setPixmap(scaled_pixmap)
 
     def closeEvent(self, event):
         if os.path.exists(self.map_file):
