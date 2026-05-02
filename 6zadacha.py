@@ -2,7 +2,7 @@
 import sys
 
 import requests
-from PyQt6.QtCore import QEvent, QTimer, Qt
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QKeyEvent, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -37,9 +37,9 @@ class MapApp(QMainWindow):
 
         self.lat_input.setText("55.7558")
         self.lon_input.setText("37.6173")
-        self.zoom_input.setText("16")
-        QTimer.singleShot(0, self.show_map)
-        
+        self.zoom_input.setText("12")
+        self.show_map()
+
     def init_ui(self):
         self.setWindowTitle("Карты")
         self.setGeometry(100, 100, 900, 700)
@@ -81,7 +81,7 @@ class MapApp(QMainWindow):
 
         zoom_label = QLabel("Масштаб:")
         self.zoom_input = QLineEdit()
-        self.zoom_input.setPlaceholderText("16")
+        self.zoom_input.setPlaceholderText("12")
         control_layout.addWidget(zoom_label)
         control_layout.addWidget(self.zoom_input)
 
@@ -136,7 +136,7 @@ class MapApp(QMainWindow):
             lon = self.clamp(lon, self.MIN_LON, self.MAX_LON)
 
             zoom_text = self.zoom_input.text().strip()
-            zoom = int(zoom_text) if zoom_text else 16
+            zoom = int(zoom_text) if zoom_text else 12
             zoom = int(self.clamp(zoom, self.MIN_ZOOM, self.MAX_ZOOM))
 
             return lat, lon, zoom

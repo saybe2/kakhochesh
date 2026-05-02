@@ -1,8 +1,8 @@
-﻿import os
+import os
 import sys
 
 import requests
-from PyQt6.QtCore import QEvent, QTimer, Qt
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QKeyEvent, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -38,8 +38,8 @@ class MapApp(QMainWindow):
         self.lat_input.setText("55.7558")
         self.lon_input.setText("37.6173")
         self.zoom_input.setText("16")
-        QTimer.singleShot(0, self.show_map)
-        
+        self.show_map()
+
     def init_ui(self):
         self.setWindowTitle("Карты")
         self.setGeometry(100, 100, 900, 700)
@@ -106,9 +106,13 @@ class MapApp(QMainWindow):
         self.search_button = QPushButton("Искать")
         self.search_button.clicked.connect(self.search_object)
 
+        self.reset_button = QPushButton("Сброс поискового результата")
+        self.reset_button.clicked.connect(self.reset_search)
+
         search_layout.addWidget(search_label)
         search_layout.addWidget(self.search_input)
         search_layout.addWidget(self.search_button)
+        search_layout.addWidget(self.reset_button)
 
         return search_layout
 
@@ -146,7 +150,6 @@ class MapApp(QMainWindow):
 
     def get_map_image(self, lat, lon, zoom):
         try:
-            span_value = self.get_span(zoom)
             theme = "dark" if self.dark_theme else "light"
             request_url = (
                 "https://static-maps.yandex.ru/v1?"
@@ -241,6 +244,11 @@ class MapApp(QMainWindow):
             self.show_map()
         except requests.exceptions.RequestException as exc:
             QMessageBox.critical(self, "Ошибка сети", f"Ошибка поиска:\n{exc}")
+
+    def reset_search(self):
+        self.search_point = None
+        self.search_input.clear()
+        self.show_map()
 
     def toggle_theme(self):
         self.dark_theme = not self.dark_theme

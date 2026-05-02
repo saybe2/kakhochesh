@@ -16,7 +16,7 @@ class MapApp(QMainWindow):
 
         self.lat_input.setText("55.7558")
         self.lon_input.setText("37.6173")
-        self.zoom_input.setText("12")
+        self.zoom_input.setText("16")
         self.show_map()
 
     def initUI(self):
@@ -56,7 +56,7 @@ class MapApp(QMainWindow):
 
         zoom_label = QLabel('Масштаб:')
         self.zoom_input = QLineEdit()
-        self.zoom_input.setPlaceholderText('12')
+        self.zoom_input.setPlaceholderText('16')
         control_layout.addWidget(zoom_label)
         control_layout.addWidget(self.zoom_input)
 
@@ -85,7 +85,7 @@ class MapApp(QMainWindow):
                 if not (1 <= zoom <= 18):
                     raise ValueError("Масштаб должен быть от 1 до 18")
             else:
-                zoom = 12
+                zoom = 16
 
             return lat, lon, zoom
 

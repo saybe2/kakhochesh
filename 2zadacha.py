@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from PyQt6.QtGui import QKeyEvent, QPixmap
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QTimer, Qt
 
 
 class MapApp(QMainWindow):
@@ -29,7 +29,7 @@ class MapApp(QMainWindow):
         self.lat_input.setText("55.7558")
         self.lon_input.setText("37.6173")
         self.zoom_input.setText("16")
-        self.show_map()
+        QTimer.singleShot(0, self.show_map)
 
     def init_ui(self):
         self.setWindowTitle("Карты")
@@ -111,7 +111,6 @@ class MapApp(QMainWindow):
             )
             response = requests.get(map_request, timeout=10)
             response.raise_for_status()
-            print(response.url)
 
             with open(self.map_file, "wb") as file:
                 file.write(response.content)

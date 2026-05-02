@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 
 import requests
@@ -32,6 +32,7 @@ class MapApp(QMainWindow):
         self.map_file = "map.png"
         self.dark_theme = False
         self.search_point = None
+        self.found_address = None
 
         self.init_ui()
 
@@ -39,10 +40,10 @@ class MapApp(QMainWindow):
         self.lon_input.setText("37.6173")
         self.zoom_input.setText("16")
         QTimer.singleShot(0, self.show_map)
-        
+
     def init_ui(self):
         self.setWindowTitle("Карты")
-        self.setGeometry(100, 100, 900, 700)
+        self.setGeometry(100, 100, 900, 750)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -56,6 +57,14 @@ class MapApp(QMainWindow):
         self.map_label.setMinimumSize(700, 500)
         self.map_label.setStyleSheet("border: 1px solid gray;")
         main_layout.addWidget(self.map_label)
+
+        address_layout = QHBoxLayout()
+        address_label = QLabel("Адрес:")
+        self.address_display = QLineEdit()
+        self.address_display.setReadOnly(True)
+        address_layout.addWidget(address_label)
+        address_layout.addWidget(self.address_display)
+        main_layout.addLayout(address_layout)
 
         self.status_bar = self.statusBar()
 
@@ -106,9 +115,13 @@ class MapApp(QMainWindow):
         self.search_button = QPushButton("Искать")
         self.search_button.clicked.connect(self.search_object)
 
+        self.reset_button = QPushButton("Сброс")
+        self.reset_button.clicked.connect(self.reset_search)
+
         search_layout.addWidget(search_label)
         search_layout.addWidget(self.search_input)
         search_layout.addWidget(self.search_button)
+        search_layout.addWidget(self.reset_button)
 
         return search_layout
 
@@ -146,7 +159,6 @@ class MapApp(QMainWindow):
 
     def get_map_image(self, lat, lon, zoom):
         try:
-            span_value = self.get_span(zoom)
             theme = "dark" if self.dark_theme else "light"
             request_url = (
                 "https://static-maps.yandex.ru/v1?"
@@ -193,7 +205,7 @@ class MapApp(QMainWindow):
             f"Координаты: {lat:.4f}, {lon:.4f} | Масштаб: {zoom} | Тема: {theme_text}"
         )
 
-    def find_object_center(self, query):
+    def find_object_center_and_address(self, query):
         geocoder_url = "https://geocode-maps.yandex.ru/1.x/"
         params = {
             "apikey": self.geocoder_api_key,
@@ -207,9 +219,11 @@ class MapApp(QMainWindow):
         data = response.json()
         members = data["response"]["GeoObjectCollection"]["featureMember"]
         if not members:
-            return None
+            return None, None
 
         geo_obj = members[0]["GeoObject"]
+        address = geo_obj["metaDataProperty"]["GeocoderMetaData"]["text"]
+
         envelope = geo_obj.get("boundedBy", {}).get("Envelope")
 
         if envelope and "lowerCorner" in envelope and "upperCorner" in envelope:
@@ -217,10 +231,10 @@ class MapApp(QMainWindow):
             up_lon, up_lat = map(float, envelope["upperCorner"].split())
             center_lon = (low_lon + up_lon) / 2
             center_lat = (low_lat + up_lat) / 2
-            return center_lon, center_lat
+            return (center_lon, center_lat), address
 
         point_lon, point_lat = map(float, geo_obj["Point"]["pos"].split())
-        return point_lon, point_lat
+        return (point_lon, point_lat), address
 
     def search_object(self):
         query = self.search_input.text().strip()
@@ -229,18 +243,27 @@ class MapApp(QMainWindow):
             return
 
         try:
-            center = self.find_object_center(query)
+            center, address = self.find_object_center_and_address(query)
             if center is None:
                 QMessageBox.information(self, "Поиск", "Объект не найден.")
                 return
 
             lon, lat = center
             self.search_point = (lon, lat)
+            self.found_address = address
+            self.address_display.setText(address)
             self.lon_input.setText(f"{lon:.6f}")
             self.lat_input.setText(f"{lat:.6f}")
             self.show_map()
         except requests.exceptions.RequestException as exc:
             QMessageBox.critical(self, "Ошибка сети", f"Ошибка поиска:\n{exc}")
+
+    def reset_search(self):
+        self.search_point = None
+        self.found_address = None
+        self.search_input.clear()
+        self.address_display.clear()
+        self.show_map()
 
     def toggle_theme(self):
         self.dark_theme = not self.dark_theme

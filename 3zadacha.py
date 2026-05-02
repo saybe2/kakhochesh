@@ -2,7 +2,7 @@ import os
 import sys
 
 import requests
-from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtCore import QEvent, QTimer, Qt
 from PyQt6.QtGui import QKeyEvent, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -34,7 +34,7 @@ class MapApp(QMainWindow):
         self.lat_input.setText("55.7558")
         self.lon_input.setText("37.6173")
         self.zoom_input.setText("16")
-        self.show_map()
+        QTimer.singleShot(0, self.show_map)
 
     def init_ui(self):
         self.setWindowTitle("Карты")
