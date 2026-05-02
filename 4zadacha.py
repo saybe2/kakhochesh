@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 
 class MapApp(QMainWindow):
     MIN_ZOOM = 1
-    MAX_ZOOM = 18
+    MAX_ZOOM = 20
     MIN_LAT = -85.0
     MAX_LAT = 85.0
     MIN_LON = -180.0
@@ -128,7 +128,7 @@ class MapApp(QMainWindow):
             theme = "dark" if self.dark_theme else "light"
             request_url = (
                 "https://static-maps.yandex.ru/v1?"
-                f"ll={lon},{lat}&spn={span_value},{span_value}"
+                f"ll={lon},{lat}&z={zoom}"
                 f"&theme={theme}&apikey={self.api_key}"
             )
             response = requests.get(request_url, timeout=10)
