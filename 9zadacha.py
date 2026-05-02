@@ -121,7 +121,6 @@ class MapApp(QMainWindow):
         self.reset_button.clicked.connect(self.reset_search)
 
         self.postal_checkbox = QCheckBox("Показывать почтовый индекс")
-        self.postal_checkbox.stateChanged.connect(self.update_address_display)
 
         search_layout.addWidget(search_label)
         search_layout.addWidget(self.search_input)
@@ -228,35 +227,14 @@ class MapApp(QMainWindow):
             return None, None
 
         geo_obj = members[0]["GeoObject"]
-        metadata = geo_obj["metaDataProperty"]["GeocoderMetaData"]
-        address = metadata["text"]
-
-        envelope = geo_obj.get("boundedBy", {}).get("Envelope")
-
-        if envelope and "lowerCorner" in envelope and "upperCorner" in envelope:
-            low_lon, low_lat = map(float, envelope["lowerCorner"].split())
-            up_lon, up_lat = map(float, envelope["upperCorner"].split())
-            center_lon = (low_lon + up_lon) / 2
-            center_lat = (low_lat + up_lat) / 2
-            return (center_lon, center_lat), address
+        address = geo_obj["metaDataProperty"]["GeocoderMetaData"]["text"]
 
         point_lon, point_lat = map(float, geo_obj["Point"]["pos"].split())
+        if self.postal_checkbox.isChecked():
+            postindex = self.get_postcode_osm(point_lat, point_lon)
+            address += f" (Индекс: {postindex})"
+
         return (point_lon, point_lat), address
-
-    def format_address(self, address):
-        if self.include_postal_code:
-            return address
-        else:
-            parts = address.split(", ")
-            if len(parts) > 0 and parts[-1].isdigit():
-                return ", ".join(parts[:-1])
-            return address
-
-    def update_address_display(self):
-        self.include_postal_code = self.postal_checkbox.isChecked()
-        if self.found_address:
-            formatted_address = self.format_address(self.found_address)
-            self.address_display.setText(formatted_address)
 
     def search_object(self):
         query = self.search_input.text().strip()
@@ -273,7 +251,7 @@ class MapApp(QMainWindow):
             lon, lat = center
             self.search_point = (lon, lat)
             self.found_address = address
-            self.update_address_display()
+            self.address_display.setText(address)
             self.lon_input.setText(f"{lon:.6f}")
             self.lat_input.setText(f"{lat:.6f}")
             self.show_map()
@@ -369,12 +347,13 @@ class MapApp(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, "map_label") and self.map_label.pixmap() is not None:
             pixmap = QPixmap(self.map_file)
-            scaled_pixmap = pixmap.scaled(
-                self.map_label.size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            self.map_label.setPixmap(scaled_pixmap)
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(
+                    self.map_label.size(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self.map_label.setPixmap(scaled_pixmap)
 
     def closeEvent(self, event):
         if os.path.exists(self.map_file):
@@ -383,6 +362,26 @@ class MapApp(QMainWindow):
             except OSError:
                 pass
 
+    def get_postcode_osm(self, lat, lon):
+        geocoder_url = f"https://nominatim.openstreetmap.org/reverse"
+        params = {
+            "format": "json",
+            "countrycodes": "ru",
+            "lat": lat,
+            "lon": lon,
+        }
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 6.2; Win64; x64)\
+            AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.7292.124 Safari/537.36"
+        }
+
+        response = requests.get(geocoder_url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+        postcode = data["address"].get("postcode")
+        return postcode
 
 def main():
     app = QApplication(sys.argv)
