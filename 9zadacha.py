@@ -363,6 +363,8 @@ class MapApp(QMainWindow):
                 pass
 
     def get_postcode_osm(self, lat, lon):
+        # Для получения почтового индекса используем OSM Nominatim потому, \
+        # что Yandex Geocoder не хочет возвращать индекс для адресов
         geocoder_url = f"https://nominatim.openstreetmap.org/reverse"
         params = {
             "format": "json",
