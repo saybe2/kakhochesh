@@ -32,7 +32,7 @@ class MapApp(QMainWindow):
         super().__init__()
         self.static_api_key = "f3a0fe3a-b07e-4840-a1da-06f18b2ddf13"
         self.geocoder_api_key = "8013b162-6b42-4997-9691-77b7074026e0"
-        self.search_api_key = "8013b162-6b42-4997-9691-77b7074026e0"  # API ключ для поиска организаций
+        self.search_api_key = "dda3ddba-c9ea-4ead-9010-f43fbc15c6e3"  # API ключ для поиска организаций
         self.map_file = "map.png"
         self.dark_theme = False
         self.search_point = None
@@ -43,6 +43,8 @@ class MapApp(QMainWindow):
         self.current_center_lat = 55.7558
         self.current_center_lon = 37.6173
         self.current_zoom = 16
+        self.orig_map_width = 650
+        self.orig_map_height = 450
         self.current_organization = None  # Хранит информацию о найденной организации
 
         self.init_ui()
@@ -194,28 +196,36 @@ class MapApp(QMainWindow):
         return None, None
 
     def pixel_to_geo(self, pixel_x, pixel_y, map_width, map_height):
-        """Конвертирует координаты пикселя в географические координаты"""
+        """Конвертирует координаты пикселя в географические координаты (Web Mercator)"""
         try:
             lat = self.current_center_lat
             lon = self.current_center_lon
             zoom = self.current_zoom
-            
-            # Вычисляем span (диапазон координат)
-            span_lon = 360.0 / (2 ** zoom)
-            span_lat = 180.0 / (2 ** zoom)
-            
-            # Вычисляем смещение от центра в пикселях
-            dx = (pixel_x - map_width / 2) / map_width
-            dy = (pixel_y - map_height / 2) / map_height
-            
-            # Конвертируем в географические координаты
-            click_lon = lon + dx * span_lon
-            click_lat = lat - dy * span_lat
-            
-            # Ограничиваем координаты допустимыми значениями
+
+            world_size = 256 * (2 ** zoom)
+
+            center_x = (lon + 180.0) / 360.0 * world_size
+
+            lat_rad = math.radians(lat)
+            center_y = (1.0 - math.log(math.tan(lat_rad) + 1.0 / math.cos(lat_rad)) / math.pi) / 2.0 * world_size
+
+            # Пересчитываем координаты клика из масштабированного изображения
+            scale_x = self.orig_map_width / map_width
+            scale_y = self.orig_map_height / map_height
+            orig_x = pixel_x * scale_x
+            orig_y = pixel_y * scale_y
+
+            click_world_x = center_x + (orig_x - self.orig_map_width / 2.0)
+            click_world_y = center_y + (orig_y - self.orig_map_height / 2.0)
+
+            click_lon = click_world_x / world_size * 360.0 - 180.0
+
+            n = 1.0 - 2.0 * click_world_y / world_size
+            click_lat = math.degrees(math.atan(math.sinh(math.pi * n)))
+
             click_lat = self.clamp(click_lat, self.MIN_LAT, self.MAX_LAT)
             click_lon = self.clamp(click_lon, self.MIN_LON, self.MAX_LON)
-            
+
             return click_lon, click_lat
         except Exception as e:
             self.status_bar.showMessage(f"Ошибка конвертации координат: {str(e)}")
@@ -247,24 +257,26 @@ class MapApp(QMainWindow):
             search_url = "https://search-maps.yandex.ru/v1/"
             params = {
                 "apikey": self.search_api_key,
-                "text": "organization",  # Ищем организации
+                "text": "organization",
                 "ll": f"{lon},{lat}",
-                "spn": f"0.001,0.001",  # Очень маленькая область для поиска в радиусе ~50м
-                "type": "biz",  # Поиск только организаций (biz)
+                "spn": "0.002,0.002",
+                "type": "biz",
                 "lang": "ru_RU",
-                "results": 5  # Запрашиваем несколько результатов для проверки расстояния
+                "results": 10
             }
             
             response = requests.get(search_url, params=params, timeout=10)
+            print(response.url)
             response.raise_for_status()
             
             data = response.json()
             features = data.get("features", [])
             
             if not features:
+                self.org_display.clear()
                 self.status_bar.showMessage("Организации в радиусе 50 м не найдены")
-                self.org_display.setText("Не найдено")
                 return
+
             
             # Ищем организацию в радиусе 50 метров
             found_org = None
@@ -328,10 +340,10 @@ class MapApp(QMainWindow):
                     f"Найдена организация: {found_org['name']} на расстоянии {min_distance:.0f} м"
                 )
             else:
+                self.org_display.clear()
                 self.status_bar.showMessage(
                     f"Организации в радиусе {self.SEARCH_RADIUS_METERS} м не найдены"
                 )
-                self.org_display.setText("Не найдено")
                 
         except requests.exceptions.RequestException as exc:
             QMessageBox.critical(self, "Ошибка сети", f"Ошибка поиска организации:\n{exc}")
@@ -503,6 +515,8 @@ class MapApp(QMainWindow):
             return
 
         pixmap = QPixmap(self.map_file)
+        self.orig_map_width = pixmap.width()
+        self.orig_map_height = pixmap.height()
         scaled_pixmap = pixmap.scaled(
             self.map_label.size(),
             Qt.AspectRatioMode.KeepAspectRatio,
