@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 
@@ -40,6 +41,8 @@ class MapApp(QMainWindow):
         self.current_center_lat = 55.7558
         self.current_center_lon = 37.6173
         self.current_zoom = 16
+        self.orig_map_width = 650
+        self.orig_map_height = 450
 
         self.init_ui()
 
@@ -173,29 +176,42 @@ class MapApp(QMainWindow):
                         self.search_by_coordinates(lat, lon)
 
     def pixel_to_geo(self, pixel_x, pixel_y, map_width, map_height):
-        """Конвертирует координаты пикселя в географические координаты"""
+        """Конвертирует координаты пикселя в географические координаты (Web Mercator)"""
         try:
-            # Получаем текущие координаты центра и масштаб
             lat = self.current_center_lat
             lon = self.current_center_lon
             zoom = self.current_zoom
-            
-            # Вычисляем span (диапазон координат)
-            span_lon = 360.0 / (2 ** zoom)
-            span_lat = 180.0 / (2 ** zoom)
-            
-            # Вычисляем смещение от центра в пикселях
-            dx = (pixel_x - map_width / 2) / map_width
-            dy = (pixel_y - map_height / 2) / map_height
-            
-            # Конвертируем в географические координаты
-            click_lon = lon + dx * span_lon
-            click_lat = lat - dy * span_lat
-            
+
+            # Размер всего мира в пикселях при данном зуме
+            world_size = 256 * (2 ** zoom)
+
+            # Конвертируем центр карты в пиксельные координаты мира
+            center_x = (lon + 180.0) / 360.0 * world_size
+
+            lat_rad = math.radians(lat)
+            center_y = (1.0 - math.log(math.tan(lat_rad) + 1.0 / math.cos(lat_rad)) / math.pi) / 2.0 * world_size
+
+            # Пересчитываем координаты клика из масштабированного изображения
+            # в оригинальные пиксели API (1 оригинальный пиксель = 1 мировой пиксель)
+            scale_x = self.orig_map_width / map_width
+            scale_y = self.orig_map_height / map_height
+            orig_x = pixel_x * scale_x
+            orig_y = pixel_y * scale_y
+
+            # Пиксельные координаты клика в мировой системе
+            click_world_x = center_x + (orig_x - self.orig_map_width / 2.0)
+            click_world_y = center_y + (orig_y - self.orig_map_height / 2.0)
+
+            # Конвертируем обратно в географические координаты
+            click_lon = click_world_x / world_size * 360.0 - 180.0
+
+            n = 1.0 - 2.0 * click_world_y / world_size
+            click_lat = math.degrees(math.atan(math.sinh(math.pi * n)))
+
             # Ограничиваем координаты допустимыми значениями
             click_lat = self.clamp(click_lat, self.MIN_LAT, self.MAX_LAT)
             click_lon = self.clamp(click_lon, self.MIN_LON, self.MAX_LON)
-            
+
             return click_lon, click_lat
         except Exception as e:
             self.status_bar.showMessage(f"Ошибка конвертации координат: {str(e)}")
@@ -357,6 +373,8 @@ class MapApp(QMainWindow):
             return
 
         pixmap = QPixmap(self.map_file)
+        self.orig_map_width = pixmap.width()
+        self.orig_map_height = pixmap.height()
         scaled_pixmap = pixmap.scaled(
             self.map_label.size(),
             Qt.AspectRatioMode.KeepAspectRatio,
